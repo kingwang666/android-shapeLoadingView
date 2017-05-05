@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tool="http://schemas.android.com/tools">
+
+    <com.mingle.widget.ShapeView
+        android:id="@+id/shape_view"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="2dp"
+        android:background="@color/view_bg"/>
+
+    <ImageView
+        android:id="@+id/indication_img"
+        android:layout_width="23dp"
+        android:layout_height="3dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="56dp"
+        android:src="@drawable/shadow"
+        android:scaleX="0.2"/>
+
+    <TextView
+        android:id="@+id/load_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="18dp"
+        android:textColor="#757575"
+        android:textSize="14sp"
+        android:visibility="gone"
+        tool:visibility="visible"/>
+</merge>

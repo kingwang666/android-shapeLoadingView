@@ -1,278 +1,275 @@
 package com.mingle.widget;
 
+import android.animation.Animator;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.annotation.TargetApi;
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Path;
+import android.content.res.TypedArray;
 import android.os.Build;
+import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
-import android.view.animation.Interpolator;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import com.mingle.shapeloading.R;
-import com.nineoldandroids.animation.ArgbEvaluator;
 
+public class ShapeLoadingView extends LinearLayout {
 
-/**
- * Created by zzz40500 on 15/4/4.
- */
-public class ShapeLoadingView extends View {
+    private static final int ANIMATION_DURATION = 500;
 
+    private static final float FACTOR = 1.2f;
 
-    private static final float genhao3 = 1.7320508075689f;
-    private static  final  float mTriangle2Circle =0.25555555f;
+    private static float mDistance = 200;
 
-    private Shape mShape = Shape.SHAPE_CIRCLE;
-    private Interpolator mInterpolator=new DecelerateInterpolator();
-    private ArgbEvaluator mArgbEvaluator=new ArgbEvaluator();
+    private ShapeView mShapeView;
 
-    private int mTriangleColor ;
-    private int mCircleColor  ;
-    private int mRectColor ;
+    private ImageView mIndicationImg;
 
-    /**
-     * 用赛贝尔曲线画圆
-     */
-    private float mMagicNumber = 0.55228475f;
+    private TextView mLoadTV;
+
+    private AnimatorSet mUpAnimatorSet;
+    private AnimatorSet mDownAnimatorSet;
+
+    private boolean mStopped = false;
+
+    private int mDelay;
 
     public ShapeLoadingView(Context context) {
         super(context);
-        init();
+        init(context, null);
     }
 
     public ShapeLoadingView(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init();
+        super(context, attrs, 0);
+        init(context, attrs);
+
     }
+
 
     public ShapeLoadingView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        init(context, attrs);
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public ShapeLoadingView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
-        init();
+        init(context, attrs);
     }
 
-    private void init() {
-        mPaint = new Paint();
-        mPaint.setColor(getResources().getColor(R.color.triangle));
-        mPaint.setAntiAlias(true);
-        mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
-        setBackgroundColor(getResources().getColor(R.color.view_bg));
-          mTriangleColor = getResources().getColor(R.color.triangle);
-          mCircleColor = getResources().getColor(R.color.circle);
-          mRectColor = getResources().getColor(R.color.triangle);
+    private void init(Context context, AttributeSet attrs) {
+        setOrientation(VERTICAL);
+        mDistance = dip2px(context, 54f);
+        LayoutInflater.from(context).inflate(R.layout.shape_load_view, this, true);
+        mShapeView = (ShapeView) findViewById(R.id.shape_view);
+        mIndicationImg = (ImageView) findViewById(R.id.indication_img);
+        mLoadTV = (TextView) findViewById(R.id.load_tv);
+
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.ShapeLoadingView);
+        String loadText = typedArray.getString(R.styleable.ShapeLoadingView_slt_text);
+        int textAppearance = typedArray.getResourceId(R.styleable.ShapeLoadingView_slt_textAppearance, -1);
+        mDelay = typedArray.getInteger(R.styleable.ShapeLoadingView_slt_delay, 80);
+        typedArray.recycle();
+
+        if (textAppearance != -1) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                mLoadTV.setTextAppearance(textAppearance);
+            } else {
+                mLoadTV.setTextAppearance(getContext(), textAppearance);
+            }
+        }
+        setLoadingText(loadText);
     }
 
-    public boolean mIsLoading = false;
-    private Paint mPaint;
-    private float mControlX = 0;
-    private float mControlY = 0;
-    private float mAnimPercent;
+    private int dip2px(Context context, float dipValue) {
+        final float scale = context.getResources().getDisplayMetrics().density;
+        return (int) (dipValue * scale + 0.5f);
+    }
 
 
     @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
+    protected void onFinishInflate() {
+        super.onFinishInflate();
+        if (getVisibility() == VISIBLE) {
+            startLoading(mDelay);
+        }
+    }
 
-        if(getVisibility()==GONE){
+    private Runnable mFreeFallRunnable = new Runnable() {
+        @Override
+        public void run() {
+            mShapeView.setRotation(180f);
+            mShapeView.setTranslationY(0);
+            mIndicationImg.setScaleX(0.2f);
+            mStopped = false;
+            freeFall();
+        }
+    };
+
+    private void startLoading(long delay) {
+        if (mDownAnimatorSet != null && mDownAnimatorSet.isRunning()) {
             return;
         }
-        // FIXME: 15/6/15  动画待优化
-        switch (mShape) {
-            case SHAPE_TRIANGLE:
-
-                if (mIsLoading) {
-                    mAnimPercent += 0.1611113;
-                    int color= (int) mArgbEvaluator.evaluate(mAnimPercent,mTriangleColor,mCircleColor);
-                    mPaint.setColor(color);
-                    // triangle to circle
-                    Path path = new Path();
-                    path.moveTo(relativeXFromView(0.5f), relativeYFromView(0f));
-
-                    if (mAnimPercent >= 1) {
-                        mShape = Shape.SHAPE_CIRCLE;
-                        mIsLoading = false;
-                        mAnimPercent=1;
-                    }
-                    float controlX = mControlX - relativeXFromView(mAnimPercent* mTriangle2Circle)
-                            * genhao3;
-                    float controlY = mControlY - relativeYFromView(mAnimPercent* mTriangle2Circle);
-                    path.quadTo(relativeXFromView(1) - controlX, controlY, relativeXFromView(0.5f + genhao3 / 4), relativeYFromView(0.75f));
-                    path.quadTo(relativeXFromView(0.5f), relativeYFromView(0.75f + 2 * mAnimPercent* mTriangle2Circle), relativeXFromView(0.5f - genhao3 / 4), relativeYFromView(0.75f));
-                    path.quadTo(controlX, controlY, relativeXFromView(0.5f), relativeYFromView(0f));
-                    path.close();
-                    canvas.drawPath(path, mPaint);
-
-                    invalidate();
-
-                } else {
-                    Path path = new Path();
-                    mPaint.setColor(getResources().getColor(R.color.triangle));
-                    path.moveTo(relativeXFromView(0.5f), relativeYFromView(0f));
-                    path.lineTo(relativeXFromView(1), relativeYFromView(genhao3 / 2f));
-                    path.lineTo(relativeXFromView(0), relativeYFromView(genhao3/2f));
-                    mControlX = relativeXFromView(0.5f - genhao3 / 8.0f);
-                    mControlY = relativeYFromView(3 / 8.0f);
-                    mAnimPercent = 0;
-                    path.close();
-                    canvas.drawPath(path, mPaint);
-
-                }
-                break;
-            case SHAPE_CIRCLE:
-
-
-                if (mIsLoading) {
-                    float magicNumber = mMagicNumber + mAnimPercent;
-                    mAnimPercent += 0.12;
-                    if (magicNumber + mAnimPercent >= 1.9f) {
-                        mShape = Shape.SHAPE_RECT;
-                        mIsLoading = false;
-                    }
-                    int color= (int) mArgbEvaluator.evaluate(mAnimPercent,mCircleColor,mRectColor);
-                    mPaint.setColor(color);
-
-                    Path path = new Path();
-
-                    path.moveTo(relativeXFromView(0.5f), relativeYFromView(0f));
-                    path.cubicTo(relativeXFromView(0.5f + magicNumber / 2), relativeYFromView(0f),
-                            relativeXFromView(1), relativeYFromView(0.5f - magicNumber / 2),
-                            relativeXFromView(1f), relativeYFromView(0.5f));
-                    path.cubicTo(
-                            relativeXFromView(1), relativeXFromView(0.5f + magicNumber / 2),
-                            relativeXFromView(0.5f + magicNumber / 2), relativeYFromView(1f),
-                            relativeXFromView(0.5f), relativeYFromView(1f));
-                    path.cubicTo(relativeXFromView(0.5f - magicNumber / 2), relativeXFromView(1f),
-                            relativeXFromView(0), relativeYFromView(0.5f + magicNumber / 2),
-                            relativeXFromView(0f), relativeYFromView(0.5f));
-                    path.cubicTo(relativeXFromView(0f), relativeXFromView(0.5f - magicNumber / 2),
-                            relativeXFromView(0.5f - magicNumber / 2), relativeYFromView(0),
-                            relativeXFromView(0.5f), relativeYFromView(0f));
-
-
-                    path.close();
-                    canvas.drawPath(path, mPaint);
-
-
-                    invalidate();
-                } else {
-
-                    mPaint.setColor(getResources().getColor(R.color.circle));
-                    Path path = new Path();
-
-                    float magicNumber = mMagicNumber;
-                    path.moveTo(relativeXFromView(0.5f), relativeYFromView(0f));
-                    path.cubicTo(relativeXFromView(0.5f + magicNumber / 2), 0,
-                            relativeXFromView(1), relativeYFromView(magicNumber / 2),
-                            relativeXFromView(1f), relativeYFromView(0.5f));
-                    path.cubicTo(
-                            relativeXFromView(1), relativeXFromView(0.5f + magicNumber / 2),
-                            relativeXFromView(0.5f + magicNumber / 2), relativeYFromView(1f),
-                            relativeXFromView(0.5f), relativeYFromView(1f));
-                    path.cubicTo(relativeXFromView(0.5f - magicNumber / 2), relativeXFromView(1f),
-                            relativeXFromView(0), relativeYFromView(0.5f + magicNumber / 2),
-                            relativeXFromView(0f), relativeYFromView(0.5f));
-                    path.cubicTo(relativeXFromView(0f), relativeXFromView(0.5f - magicNumber / 2),
-                            relativeXFromView(0.5f - magicNumber / 2), relativeYFromView(0),
-                            relativeXFromView(0.5f), relativeYFromView(0f));
-                    mAnimPercent = 0;
-
-                    path.close();
-                    canvas.drawPath(path, mPaint);
-
-
-                }
-
-                break;
-            case SHAPE_RECT:
-
-
-                if (mIsLoading) {
-
-
-                    mAnimPercent += 0.15;
-                    if (mAnimPercent >= 1) {
-                        mShape = Shape.SHAPE_TRIANGLE;
-                        mIsLoading = false;
-                        mAnimPercent = 1;
-                    }
-                    int color= (int) mArgbEvaluator.evaluate(mAnimPercent,mRectColor,mTriangleColor);
-                    mPaint.setColor(color);
-                    Path path = new Path();
-                    path.moveTo(relativeXFromView(0.5f * mAnimPercent), 0);
-                    path.lineTo(relativeYFromView(1 - 0.5f * mAnimPercent), 0);
-                    float distanceX = (mControlX) * mAnimPercent;
-                    float distanceY = (relativeYFromView(1f) - mControlY) * mAnimPercent;
-
-                    path.lineTo(relativeXFromView(1f) - distanceX, relativeYFromView(1f) - distanceY);
-                    path.lineTo(relativeXFromView(0f) + distanceX, relativeYFromView(1f) - distanceY);
-
-                    path.close();
-
-
-                    canvas.drawPath(path, mPaint);
-                    invalidate();
-
-                } else {
-                    mPaint.setColor(getResources().getColor(R.color.rect));
-                    mControlX = relativeXFromView(0.5f - genhao3 / 4);
-                    mControlY = relativeYFromView(0.75f);
-                    Path path = new Path();
-                    path.moveTo(relativeXFromView(0f), relativeYFromView(0f));
-                    path.lineTo(relativeXFromView(1f), relativeYFromView(0f));
-                    path.lineTo(relativeXFromView(1f), relativeYFromView(1f));
-                    path.lineTo(relativeXFromView(0f), relativeYFromView(1f));
-                    path.close();
-                    mAnimPercent = 0;
-                    canvas.drawPath(path, mPaint);
-
-                }
-
-
-                break;
-
+        this.removeCallbacks(mFreeFallRunnable);
+        if (delay > 0) {
+            this.postDelayed(mFreeFallRunnable, delay);
+        } else {
+            this.post(mFreeFallRunnable);
         }
-
-
     }
 
-
-    private float relativeXFromView(float percent) {
-        return getWidth() * percent;
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        stopLoading();
     }
 
-    private float relativeYFromView(float percent) {
-        return getHeight() * percent;
+    private void stopLoading() {
+        mStopped = true;
+        if (mUpAnimatorSet != null) {
+            if (mUpAnimatorSet.isRunning()) {
+                mUpAnimatorSet.cancel();
+            }
+            mUpAnimatorSet.removeAllListeners();
+            for (Animator animator : mUpAnimatorSet.getChildAnimations()) {
+                animator.removeAllListeners();
+            }
+            mUpAnimatorSet = null;
+        }
+        if (mDownAnimatorSet != null) {
+            if (mDownAnimatorSet.isRunning()) {
+                mDownAnimatorSet.cancel();
+            }
+            mDownAnimatorSet.removeAllListeners();
+            for (Animator animator : mDownAnimatorSet.getChildAnimations()) {
+                animator.removeAllListeners();
+            }
+            mDownAnimatorSet = null;
+        }
+        this.removeCallbacks(mFreeFallRunnable);
     }
-
-
-    public void changeShape() {
-        mIsLoading = true;
-
-
-        invalidate();
-    }
-
-    public enum Shape {
-        SHAPE_TRIANGLE, SHAPE_RECT, SHAPE_CIRCLE
-    }
-
 
     @Override
     public void setVisibility(int visibility) {
-        super.setVisibility(visibility);
+        this.setVisibility(visibility, mDelay);
+    }
 
-        if(visibility==VISIBLE){
-            invalidate();
+    public void setVisibility(int visibility, int delay) {
+        super.setVisibility(visibility);
+        if (visibility == View.VISIBLE) {
+            startLoading(delay);
+        } else {
+            stopLoading();
         }
     }
 
-    public Shape getShape() {
-        return mShape;
+    public void setDelay(int delay) {
+        mDelay = delay;
     }
+
+    public int getDelay() {
+        return mDelay;
+    }
+
+    public void setLoadingText(CharSequence loadingText) {
+        if (TextUtils.isEmpty(loadingText)) {
+            mLoadTV.setVisibility(GONE);
+        } else {
+            mLoadTV.setVisibility(VISIBLE);
+        }
+        mLoadTV.setText(loadingText);
+    }
+
+    public CharSequence getLoadingText(){
+        return mLoadTV.getText();
+    }
+
+    /**
+     * 上抛
+     */
+    private void upThrow() {
+        if (mUpAnimatorSet == null) {
+            mUpAnimatorSet = new AnimatorSet();
+            mUpAnimatorSet.playTogether(
+                    ObjectAnimator.ofFloat(mShapeView, "translationY", mDistance, 0),
+                    ObjectAnimator.ofFloat(mIndicationImg, "scaleX", 1f, 0.2f),
+                    ObjectAnimator.ofFloat(mShapeView, "rotation", 0, 180)
+            );
+            mUpAnimatorSet.setDuration(ANIMATION_DURATION);
+            mUpAnimatorSet.setInterpolator(new DecelerateInterpolator(FACTOR));
+            mUpAnimatorSet.addListener(new Animator.AnimatorListener() {
+                @Override
+                public void onAnimationStart(Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    if (!mStopped) {
+                        freeFall();
+                    }
+                }
+
+                @Override
+                public void onAnimationCancel(Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animator animation) {
+
+                }
+            });
+        }
+        mUpAnimatorSet.start();
+
+
+    }
+
+    /**
+     * 下落
+     */
+    private void freeFall() {
+        if (mDownAnimatorSet == null) {
+            mDownAnimatorSet = new AnimatorSet();
+            mDownAnimatorSet.playTogether(
+                    ObjectAnimator.ofFloat(mShapeView, "translationY", 0, mDistance),
+                    ObjectAnimator.ofFloat(mIndicationImg, "scaleX", 0.2f, 1f)
+            );
+            mDownAnimatorSet.setDuration(ANIMATION_DURATION);
+            mDownAnimatorSet.setInterpolator(new AccelerateInterpolator(FACTOR));
+            mDownAnimatorSet.addListener(new Animator.AnimatorListener() {
+                @Override
+                public void onAnimationStart(Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    if (!mStopped) {
+                        mShapeView.changeShape();
+                        upThrow();
+                    }
+                }
+
+                @Override
+                public void onAnimationCancel(Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animator animation) {
+
+                }
+            });
+        }
+        mDownAnimatorSet.start();
+    }
+
 }

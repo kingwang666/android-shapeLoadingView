@@ -16,8 +16,10 @@ public class DialogDemoActivity extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dialog_demo);
-         shapeLoadingDialog=new ShapeLoadingDialog(this);
-        shapeLoadingDialog.setLoadingText("加载中...");
+        shapeLoadingDialog = new ShapeLoadingDialog.Builder(this)
+                .canceledOnTouchOutside(false)
+                .loadText("test")
+                .build();
 
 
         findViewById(R.id.button1).setOnClickListener(new View.OnClickListener() {

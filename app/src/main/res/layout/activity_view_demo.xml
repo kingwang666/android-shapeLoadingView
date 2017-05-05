@@ -9,11 +9,12 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.mingle.ViewDemoActivity">
 
-    <com.mingle.widget.LoadingView
+    <com.mingle.widget.ShapeLoadingView
         android:id="@+id/loadView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        app:loadingText="加载中..." />
+        app:slt_text="加载中..."
+        app:slt_delay="3000"/>
 
 </RelativeLayout>
