@@ -31,7 +31,7 @@ public class ShapeLoadingDialog extends AppCompatDialog{
 
         mShapeLoadingView.setDelay(mBuilder.mDelay);
         mShapeLoadingView.setLoadingText(mBuilder.mLoadText);
-
+        setOnCancelListener(mBuilder.mOnCancelListener);
         setOnDismissListener(new OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
@@ -53,6 +53,8 @@ public class ShapeLoadingDialog extends AppCompatDialog{
     public static class Builder{
 
         private Context mContext;
+
+        private OnCancelListener mOnCancelListener;
 
         private int mDelay = 80;
 
@@ -78,6 +80,11 @@ public class ShapeLoadingDialog extends AppCompatDialog{
 
         public Builder loadText(@StringRes int resId) {
             mLoadText = mContext.getString(resId);
+            return this;
+        }
+
+        public Builder cancelListener(OnCancelListener listener){
+            mOnCancelListener = listener;
             return this;
         }
 
